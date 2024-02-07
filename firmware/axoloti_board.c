@@ -22,15 +22,13 @@
 
 //#define ENABLE_SERIAL_DEBUG 1
 
-uint8_t adc_ch = 8; /* We can start with the conversion of channel 8 (voltage supervisor) */
+uint8_t adc3_ch = 8; /* We start with the conversion of channel 8 (voltage supervisor) */
 
 void axoloti_board_init(void) {
-#ifdef BOARD_AXOLOTI_V05
     /* initialize DMA2D engine */
     RCC->AHB1ENR |= RCC_AHB1ENR_DMA2DEN;
     RCC->AHB1RSTR |= RCC_AHB1RSTR_DMA2DRST;
     RCC->AHB1RSTR &= ~RCC_AHB1RSTR_DMA2DRST;
-#endif
 }
 
 void adc3_init(void) {
@@ -58,7 +56,7 @@ void adc3_init(void) {
 
     ADC3->SQR1 = 0;
     ADC3->SQR2 = 0;
-    ADC3->SQR3 = adc_ch; /* No DMA available! Incrementing the channel manually. Starting with ADC3_IN_8 (the 5V supervisor). */
+    ADC3->SQR3 = adc3_ch; /* No DMA available! Incrementing the channel manually. Starting with ADC3_IN_8 (the 5V supervisor). */
     ADC3->CR2 |= ADC_CR2_SWSTART;
 }
 
@@ -138,11 +136,11 @@ static const ADCConversionGroup adcgrpcfg1 = {
 
 void adc3_convert(void) {
     /* Retrieve sample from ADC3 (slower than ADC1 and no DMA available, but still adequate) */
-    adcvalues[10 + adc_ch] = (ADC3->DR); /* Store ADC3 results in adcvalues[14...18] */
+    adcvalues[10 + adc3_ch] = (ADC3->DR); /* Store ADC3 results in adcvalues[14...18] */
 
-    if (++adc_ch > 8) adc_ch = 4; /* Wrap ADC3 channel from 4 to 8 */
+    if (++adc3_ch > 8) adc3_ch = 4; /* Wrap ADC3 channel from 4 to 8 */
 
-    ADC3->SQR3 = adc_ch; /* Set next channel for conversion */
+    ADC3->SQR3 = adc3_ch; /* Set next channel for conversion */
     ADC3->CR2 |= ADC_CR2_SWSTART; /* Start next conversion */
 }
 
@@ -150,4 +148,5 @@ void adc_convert(void) {
     adcStopConversion(&ADCD1); /* restart ADC1 sampling sequence */
     adc3_convert();
     adcStartConversion(&ADCD1, &adcgrpcfg1, adcvalues, ADC_GRP1_BUF_DEPTH);
+
 }

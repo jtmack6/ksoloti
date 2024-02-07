@@ -194,10 +194,8 @@ void lock_SAI_to_SPI_FS(void)
 }
 
 
-static void ADAU_I2C_Init(void)
-{
-    if(HAL_I2C_GetState(&ADAU1961_i2c_handle) == HAL_I2C_STATE_RESET)
-    {
+static void ADAU_I2C_Init(void) {
+    if(HAL_I2C_GetState(&ADAU1961_i2c_handle) == HAL_I2C_STATE_RESET) {
         /* DISCOVERY_I2Cx peripheral configuration */
         ADAU1961_i2c_handle.Init.ClockSpeed = 400000;
         ADAU1961_i2c_handle.Init.DutyCycle = I2C_DUTYCYCLE_16_9;
@@ -218,20 +216,17 @@ static void ADAU_I2C_Init(void)
 }
 
 
-uint32_t HAL_GetTick(void)
-{
+uint32_t HAL_GetTick(void) {
     return halGetCounterValue();
 }
 
 
-uint32_t HAL_RCC_GetPCLK1Freq(void)
-{
+uint32_t HAL_RCC_GetPCLK1Freq(void) {
     return STM32_PCLK1;
 }
 
 
-void ADAU1961_WriteRegister(uint16_t RegisterAddr, uint8_t RegisterValue)
-{
+void ADAU1961_WriteRegister(uint16_t RegisterAddr, uint8_t RegisterValue) {
     i2ctxbuf[0] = RegisterAddr >> 8;
     i2ctxbuf[1] = RegisterAddr;
     i2ctxbuf[2] = RegisterValue;
@@ -250,8 +245,7 @@ void ADAU1961_WriteRegister(uint16_t RegisterAddr, uint8_t RegisterValue)
 }
 
 
-void ADAU1961_WriteRegister6(uint16_t RegisterAddr, uint8_t * RegisterValues)
-{
+void ADAU1961_WriteRegister6(uint16_t RegisterAddr, uint8_t * RegisterValues) {
 
     i2ctxbuf[0] = RegisterAddr >> 8;
     i2ctxbuf[1] = RegisterAddr;
@@ -276,8 +270,7 @@ void ADAU1961_WriteRegister6(uint16_t RegisterAddr, uint8_t * RegisterValues)
 }
 
 
-void ADAU1961_ReadRegister6(uint16_t RegisterAddr)
-{
+void ADAU1961_ReadRegister6(uint16_t RegisterAddr) {
     i2ctxbuf[0] = RegisterAddr >> 8;
     i2ctxbuf[1] = RegisterAddr;
 

@@ -20,7 +20,6 @@
 #include "watchdog.h"
 
 
-
 __attribute__ ((section (".data"))) int flash_WaitForLastOperation(void) {
   while (FLASH->SR == FLASH_SR_BSY) {
     WWDG->CR = WWDG_CR_T;
@@ -42,8 +41,7 @@ __attribute__ ((section (".data"))) void flash_Erase_sector1(int sector) {
   flash_WaitForLastOperation();
 }
 
-int flash_Erase_sector(int sector)
-{
+int flash_Erase_sector(int sector) {
     /* interrupts would cause flash execution, stall */
     /* and cause watchdog trigger */
     chSysLock();
@@ -76,8 +74,7 @@ int flash_ProgramWord(uint32_t Address, uint32_t Data) {
   return status;
 }
 
-void flash_unlock(void)
-{
+void flash_unlock(void) {
     /* unlock sequence */
     FLASH->KEYR = 0x45670123;
     FLASH->KEYR = 0xCDEF89AB;

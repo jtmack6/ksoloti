@@ -51,8 +51,7 @@ uint32_t fwid;
 
 static WORKING_AREA(waThreadUSBDMidi, 256);
 
-__attribute__((noreturn)) static msg_t ThreadUSBDMidi(void *arg)
-{
+__attribute__((noreturn)) static msg_t ThreadUSBDMidi(void *arg) {
     (void)arg;
 
 #if CH_USE_REGISTRY
@@ -99,13 +98,11 @@ void InitPConnection(void)
 int AckPending = 0;
 bool connected = 0;
 
-int GetFirmwareID(void)
-{
+int GetFirmwareID(void) {
     return fwid;
 }
 
-void TransmitDisplayPckt(void)
-{
+void TransmitDisplayPckt(void) {
     if (patchMeta.pDisplayVector == 0)
         return;
 
@@ -118,10 +115,8 @@ void TransmitDisplayPckt(void)
                             length);
 }
 
-void LogTextMessage(const char* format, ...)
-{
-    if ((usbGetDriverStateI(BDU1.config->usbp) == USB_ACTIVE) && (connected))
-    {
+void LogTextMessage(const char* format, ...) {
+    if ((usbGetDriverStateI(BDU1.config->usbp) == USB_ACTIVE) && (connected)) {
         int h = 0x546F7841; // "AxoT"
 
         chSequentialStreamWrite((BaseSequentialStream * )&BDU1,
@@ -429,8 +424,7 @@ void CloseFile(void) {
   }
 }
 
-void CopyPatchToFlash(void)
-{
+void CopyPatchToFlash(void) {
     flash_unlock();
     flash_Erase_sector(11);
 
@@ -438,8 +432,7 @@ void CopyPatchToFlash(void)
     int flash_addr = PATCHFLASHLOC;
     int c;
 
-    for (c = 0; c < PATCHFLASHSIZE;)
-    {
+    for (c = 0; c < PATCHFLASHSIZE;) {
         flash_ProgramWord(flash_addr, *(int32_t *)src_addr);
         src_addr += 4;
         flash_addr += 4;
@@ -451,8 +444,7 @@ void CopyPatchToFlash(void)
     flash_addr = PATCHFLASHLOC;
     int err = 0;
 
-    for (c = 0; c < PATCHFLASHSIZE;)
-    {
+    for (c = 0; c < PATCHFLASHSIZE;) {
         if (*(int32_t *)flash_addr != *(int32_t *)src_addr)
         err++;
         src_addr += 4;

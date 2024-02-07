@@ -52,14 +52,12 @@
 /* Initialization and main thread.                                           */
 /*===========================================================================*/
 
-
-//#define ENABLE_SERIAL_DEBUG 1
+// #define ENABLE_SERIAL_DEBUG 1
 
 extern void MY_USBH_Init(void);
 
 
-int main(void)
-{
+int main(void) {
     /* copy vector table to SRAM1! */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnonnull"
@@ -122,22 +120,19 @@ int main(void)
 
     MY_USBH_Init();
 
-    if (!exception_check())
-    {
+    if (!exception_check()) {
         /* Only try mounting SD and booting a patch when no exception is reported */
 
         sdcard_attemptMountIfUnmounted();
 
         /* Patch start can be skipped by holding S2 during boot */
-        if (fs_ready && !palReadPad(SW2_PORT, SW2_PIN))
-        {
+        if (fs_ready && !palReadPad(SW2_PORT, SW2_PIN)) {
             LoadPatchStartSD();
         }
 
         /* If no patch booting or running yet try loading from flash */
         /* Patch start can be skipped by holding S2 during boot */
-        if (patchStatus == STOPPED && !palReadPad(SW2_PORT, SW2_PIN))
-        {
+        if (patchStatus == STOPPED && !palReadPad(SW2_PORT, SW2_PIN)) {
             LoadPatchStartFlash();
         }
     }
@@ -148,13 +143,11 @@ int main(void)
 }
 
 
-void HAL_Delay(unsigned int n)
-{
+void HAL_Delay(unsigned int n) {
     chThdSleepMilliseconds(n);
 }
 
 
-void _sbrk(void)
-{
+void _sbrk(void) {
     while (1);
 }
