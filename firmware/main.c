@@ -112,11 +112,15 @@ int main(void) {
     codec_init(is_master);
     spilink_init(is_master);
 
-    if (!palReadPad(SW2_PORT, SW2_PIN))
-    { /* button S2 not pressed */
+    if (!palReadPad(SW2_PORT, SW2_PIN)) {
+        /* button S2 not pressed */
         // watchdog_init();
         chThdSleepMilliseconds(1);
     }
+
+#ifdef AXOLOTI_CONTROL
+    axoloti_control_init();
+#endif
 
     MY_USBH_Init();
 

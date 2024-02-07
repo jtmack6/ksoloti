@@ -360,8 +360,8 @@
 #define VAL_GPIOB_MODER             (PIN_MODE_INPUT(GPIOB_PIN0) |           \
                                      PIN_MODE_INPUT(GPIOB_PIN1) |           \
                                      PIN_MODE_INPUT(GPIOB_PIN2) |           \
-                                     PIN_MODE_INPUT(GPIOB_PIN3) |       \
-                                     PIN_MODE_INPUT(GPIOB_PIN4) |       \
+                                     PIN_MODE_INPUT(GPIOB_PIN3) |           \
+                                     PIN_MODE_INPUT(GPIOB_PIN4) |           \
                                      PIN_MODE_INPUT(GPIOB_PIN5) |       \
                                      PIN_MODE_INPUT(GPIOB_PIN6) |       \
                                      PIN_MODE_INPUT(GPIOB_PIN7) |           \
@@ -392,8 +392,8 @@
 #define VAL_GPIOB_OSPEEDR           (PIN_OSPEED_100M(GPIOB_PIN0) |          \
                                      PIN_OSPEED_100M(GPIOB_PIN1) |          \
                                      PIN_OSPEED_100M(GPIOB_PIN2) |          \
-                                     PIN_OSPEED_50M(GPIOB_PIN3) |          \
-                                     PIN_OSPEED_50M(GPIOB_PIN4) |          \
+                                     PIN_OSPEED_50M(GPIOB_PIN3) |           \
+                                     PIN_OSPEED_50M(GPIOB_PIN4) |           \
                                      PIN_OSPEED_100M(GPIOB_PIN5) |          \
                                      PIN_OSPEED_100M(GPIOB_PIN6) |          \
                                      PIN_OSPEED_100M(GPIOB_PIN7) |          \

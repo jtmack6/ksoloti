@@ -73,8 +73,8 @@ static int GetNumberOfThreads(void) {
 #ifdef CH_USE_REGISTRY
     int i = 1;
     Thread *thd1 = chRegFirstThread();
-    while (thd1)
-    {
+
+    while (thd1) {
         i++;
         thd1 = chRegNextThread(thd1);
     }
@@ -89,17 +89,21 @@ void CheckStackOverflow(void) {
 #ifdef CH_DBG_FILL_THREADS
     Thread *thd = chRegFirstThread();
 
-    // skip 1st thread, main thread
+    /* skip 1st thread, main thread */
     thd = chRegNextThread (thd);
     int critical = 0;
     int nfree = 0;
+
     while(thd) {
         char *stk = (char *)(thd + 1);
         nfree = 0;
+
         while (*stk == CH_STACK_FILL_VALUE) {
             nfree++;
             stk++;
-            if (nfree >= STACKSPACE_MARGIN) break;
+            if (nfree >= STACKSPACE_MARGIN) {
+                break;
+            }
         }
 
         if (nfree < STACKSPACE_MARGIN) {
@@ -113,17 +117,21 @@ void CheckStackOverflow(void) {
     if (critical) {
         const char *name = chRegGetThreadName(thd);
 
-        if (name!=0) {
-            if (nfree)
+        if (name != 0) {
+            if (nfree) {
                 LogTextMessage("Thread %s : stack critical %d",name,nfree);
-            else
+            }
+            else {
                 LogTextMessage("Thread %s : stack overflow",name);
+            }
         }
         else {
-            if (nfree)
+            if (nfree) {
                 LogTextMessage("Thread ?? : stack critical %d",nfree);
-            else
+            }
+            else {
                 LogTextMessage("Thread ?? : stack overflow");
+            }
         }
     }
 #endif
@@ -201,6 +209,7 @@ static msg_t ThreadDSP(void *arg) {
     chRegSetThreadName("dsp");
 #endif
     codec_clearbuffer();
+
     while (1) {
 
 #ifdef DEBUG_PATCH_INT_ON_GPIO
@@ -211,8 +220,7 @@ static msg_t ThreadDSP(void *arg) {
         eventmask_t evt = chEvtWaitOne((eventmask_t)7);
         if (evt == 1) {
             static unsigned int tStart;
-            tStart = halGetCounterValue();
-
+            tStart = hal_lld_get_counter_value();
             watchdog_feed();
 
             if (patchStatus == RUNNING) {
@@ -228,10 +236,10 @@ static msg_t ThreadDSP(void *arg) {
             else if (patchStatus == STOPPED) {
                 codec_clearbuffer();
             }
-            
+
             adc_convert();
-            
-            DspTime = RTT2US(halGetCounterValue() - tStart);
+
+            DspTime = RTT2US(hal_lld_get_counter_value() - tStart);
             dspLoadPct = (100 * DspTime) / (1000000 / 3000);
             if (dspLoadPct > 98) {
                 /* Overload: clear output buffers and give other processes a chance */
@@ -254,9 +262,10 @@ static msg_t ThreadDSP(void *arg) {
             }
             else if (loadPatchIndex == START_FLASH) {
                 /* Patch in flash sector 11 */
-                memcpy((uint8_t*)PATCHMAINLOC, (uint8_t*)PATCHFLASHLOC, PATCHFLASHSIZE);
-                if ((*(uint32_t*)PATCHMAINLOC != 0xFFFFFFFF) && (*(uint32_t*)PATCHMAINLOC != 0))
+                memcpy((uint8_t *)PATCHMAINLOC, (uint8_t *)PATCHFLASHLOC, PATCHFLASHSIZE);
+                if ((*(uint32_t *)PATCHMAINLOC != 0xFFFFFFFF) && (*(uint32_t *)PATCHMAINLOC != 0)) {
                     StartPatch1();
+                }
             }
             else if (loadPatchIndex == START_SD) {
                 strcpy(&loadFName[0], "/start.bin");
@@ -274,14 +283,12 @@ static msg_t ThreadDSP(void *arg) {
                 }
 
                 err = f_read(&f, (uint8_t *)PATCHMAINLOC, 0xE000, (void *)&bytes_read);
-
                 if (err != FR_OK) {
                     report_fatfs_error(err, index_fn);
                     continue;
                 }
 
                 err = f_close(&f);
-
                 if (err != FR_OK) {
                     report_fatfs_error(err, index_fn);
                     continue;
@@ -291,11 +298,11 @@ static msg_t ThreadDSP(void *arg) {
                 t = (char *)PATCHMAINLOC;
                 int32_t cindex = 0;
 
-                //LogTextMessage("load %d %d %x",index, bytes_read, t);
+                // LogTextMessage("load %d %d %x",index, bytes_read, t);
                 while (bytes_read) {
-                    //LogTextMessage("scan %d",*t);
+                    // LogTextMessage("scan %d",*t);
                     if (cindex == loadPatchIndex) {
-                        //LogTextMessage("match %d",index);
+                        // LogTextMessage("match %d",index);
                         char *p, *e;
                         p = t;
                         e = t;
@@ -318,11 +325,14 @@ static msg_t ThreadDSP(void *arg) {
                             *e++ = 'i';
                             *e++ = 'n';
                             *e = 0;
+
                             loadFName[0] = '/';
                             strcpy(&loadFName[1], p);
 
                             int res = sdcard_loadPatch1(loadFName);
-                            if (!res) StartPatch1();
+                            if (!res) {
+                                StartPatch1();
+                            }
 
                             if (patchStatus != RUNNING) {
                                 loadPatchIndex = START_SD;
@@ -334,8 +344,9 @@ static msg_t ThreadDSP(void *arg) {
                         goto cont;
                     }
 
-                    if (*t == '\n')
+                    if (*t == '\n') {
                         cindex++;
+                    }
 
                     t++;
                     bytes_read--;
@@ -353,7 +364,7 @@ static msg_t ThreadDSP(void *arg) {
             }
         }
         else if (evt == 4) {
-            // start patch
+            /* Start patch */
             codec_clearbuffer();
             StartPatch1();
         }
@@ -363,17 +374,19 @@ static msg_t ThreadDSP(void *arg) {
 #endif
 
     }
-    //return (msg_t)0;
+    // return (msg_t)0;
 }
 
 
 void StopPatch(void) {
-    if (!patchStatus)    {
+    if (!patchStatus) {
         patchStatus = STOPPING;
 
         while (1) {
-            chThdSleepMilliseconds(1);
-            if (patchStatus == STOPPED) break;
+          chThdSleepMilliseconds(1);
+            if (patchStatus == STOPPED) {
+                break;
+            }  
         }
 
         StopPatch1();
@@ -385,8 +398,9 @@ void StopPatch(void) {
 int StartPatch(void) {
     chEvtSignal(pThreadDSP, (eventmask_t)4);
 
-    while ((patchStatus != RUNNING) && (patchStatus != STARTFAILED))
+    while ((patchStatus != RUNNING) && (patchStatus != STARTFAILED)) {
         chThdSleepMilliseconds(1);
+    }
 
     if (patchStatus == STARTFAILED) {
         patchStatus = STOPPED;
@@ -399,13 +413,12 @@ int StartPatch(void) {
 
 void start_dsp_thread(void) {
     if (!pThreadDSP)
-        pThreadDSP = chThdCreateStatic(waThreadDSP, sizeof(waThreadDSP), HIGHPRIO-1, ThreadDSP, NULL);
+        pThreadDSP = chThdCreateStatic(waThreadDSP, sizeof(waThreadDSP), HIGHPRIO - 1, ThreadDSP, NULL);
 }
 
 
 void computebufI(int32_t *inp, int32_t *outp) {
-    int i; for (i = 0; i < 32; i++)
-    {
+    int i; for (i = 0; i < 32; i++) {
         inbuf[i] = inp[i];
     }
 

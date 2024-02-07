@@ -362,7 +362,7 @@ void EnterMenuFormat(void) {
 // static void UIPollButtons2(void);
 
 void AxolotiControlUpdate(void) {
-#if ((BOARD_AXOLOTI_V05)&&(AXOLOTI_CONTROL))
+#ifdef AXOLOTI_CONTROL
     do_axoloti_control();
     UIPollButtons2();
     UIUpdateLCD();

@@ -84,100 +84,87 @@ typedef enum {
 } edge_t;
 
 
-void blink_and_retry(void)
-{
+void blink_and_retry(void) {
     sysmon_blink_pattern(SYNCED_ERROR);
     chThdSleepMilliseconds(2000);
 }
 
 
-void wait_SPI_fsync(edge_t edge)
-{
-    while (1)
-    {
+void wait_SPI_fsync(edge_t edge) {
+    while (1) {
         /* sync on NSS. */
         palSetPadMode(SPILINK_FSYNC_PORT, SPILINK_FSYNC_PIN, PAL_MODE_INPUT);
 
         volatile int i,j;
 
         j = 1000000; /* wait till NSS is low (or already is) */
-        while(--j)
-        {
+        while(--j) {
             if (edge ^ !palReadPad(SPILINK_FSYNC_PORT, SPILINK_FSYNC_PIN))
                 break;
         }
 
         i = 1000000; /* wait till NSS is high */
-        while(--i)
-        {
+        while(--i) {
             if (edge ^ palReadPad(SPILINK_FSYNC_PORT, SPILINK_FSYNC_PIN))
                 break;
         }
 
         j = 1000000; /* wait till NSS is low again */
-        while(--j)
-        {
+        while(--j) {
             if (edge ^ !palReadPad(SPILINK_FSYNC_PORT, SPILINK_FSYNC_PIN))
                 break;
         }
 
-        if ((j == 0) || (i == 0))
-        {
+        if ((j == 0) || (i == 0)) {
             /* no pulse edge found. Blink and retry. */
             blink_and_retry();
         }
-        else
+        else {
             break; /* pulse edge found. Leave this loop and function. */
+        }
     }
 }
 
 
-void detect_MCO(void)
-{
-    while (1)
-    {
+void detect_MCO(void) {
+    while (1) {
         volatile int i, j;
 
         chSysLock();
 
         j = 1000; /* wait till clock is low */
-        while (--j)
-        {
+        while (--j) {
             if (!palReadPad(MCO1_PORT, MCO1_PIN))
                 break;
         }
 
         i = 1000; /* then wait till clock is high */
-        while (--i)
-        {
+        while (--i) {
             if (palReadPad(MCO1_PORT, MCO1_PIN))
                 break;
         }
 
         j = 1000; /* then wait till clock is low again */
-        while (--j)
-        {
+        while (--j) {
             if (!palReadPad(MCO1_PORT, MCO1_PIN))
                 break;
         }
 
         chSysUnlock();
 
-        if ((j == 0) || (i == 0))
-        {
+        if ((j == 0) || (i == 0)) {
             /* no pulse edge found. Blink and retry. */
             blink_and_retry();
         }
-        else
+        else {
             break; /* clock found, leave this loop... */
+        }
     }
 }
 
 
-void lock_SAI_to_SPI_FS(void)
-{
-    while(1)
-    {
+void lock_SAI_to_SPI_FS(void) {
+    while(1) {
         /* Sync codec FS with SPI frame */
         volatile int i = 0;
 
@@ -185,11 +172,13 @@ void lock_SAI_to_SPI_FS(void)
         wait_SPI_fsync(falling);
 
         /* Now count time to SAI1 FS edge */
-        while(palReadPad(SAI1_FS_PORT, SAI1_FS_PIN))
+        while(palReadPad(SAI1_FS_PORT, SAI1_FS_PIN)) {
             ++i;
+        }
 
-        if ((i > 1) && (i < 4))
+        if ((i > 1) && (i < 4)) {
             break; /* Lock found */
+        }
     }
 }
 
@@ -217,7 +206,7 @@ static void ADAU_I2C_Init(void) {
 
 
 uint32_t HAL_GetTick(void) {
-    return halGetCounterValue();
+    return hal_lld_get_counter_value();
 }
 
 
@@ -235,9 +224,7 @@ void ADAU1961_WriteRegister(uint16_t RegisterAddr, uint8_t RegisterValue) {
 
     HAL_StatusTypeDef r = HAL_I2C_Master_Transmit(&ADAU1961_i2c_handle, ADAU1961_I2C_ADDR, i2ctxbuf, 3, TIMEOUT);
 
-    if (r != HAL_OK)
-    {
-        // volatile unsigned int i = r;
+    if (r != HAL_OK) {
         while(1);
     }
 
@@ -260,8 +247,7 @@ void ADAU1961_WriteRegister6(uint16_t RegisterAddr, uint8_t * RegisterValues) {
 
     HAL_StatusTypeDef r = HAL_I2C_Master_Transmit(&ADAU1961_i2c_handle, ADAU1961_I2C_ADDR, i2ctxbuf, 8, TIMEOUT);
 
-    if (r != HAL_OK)
-    {
+    if (r != HAL_OK) {
         setErrorFlag(ERROR_CODEC_I2C);
         while(1);
     }
@@ -282,18 +268,15 @@ void ADAU1961_ReadRegister6(uint16_t RegisterAddr) {
 
     HAL_StatusTypeDef r = HAL_I2C_Master_Receive(&ADAU1961_i2c_handle, ADAU1961_I2C_ADDR+1, i2crxbuf, 6, TIMEOUT);
 
-    if (r != HAL_OK)
-    {
+    if (r != HAL_OK) {
         setErrorFlag(ERROR_CODEC_I2C);
         while(1);
     }
-
-    chThdSleepMilliseconds(10);
 }
 
 
-static void dma_sai_a_interrupt_spilink_master(void* dat, uint32_t flags)
-{
+static void dma_sai_a_interrupt_spilink_master(void* dat, uint32_t flags) {
+
     (void) dat;
     (void) flags;
 
@@ -303,14 +286,16 @@ static void dma_sai_a_interrupt_spilink_master(void* dat, uint32_t flags)
 #endif
 
     chSysLockFromIsr();
-    codec_interrupt_timestamp = halGetCounterValue();
+    codec_interrupt_timestamp = hal_lld_get_counter_value();
     spilink_master_process();
     chSysUnlockFromIsr();
 
-    if ((sai_a_dma)->stream->CR & STM32_DMA_CR_CT)
+    if ((sai_a_dma)->stream->CR & STM32_DMA_CR_CT) {
         computebufI(rbuf2, buf);
-    else
+    }
+    else {
         computebufI(rbuf, buf2);
+    }
 
 #ifdef DEBUG_SAI_INT_ON_GPIO
     palClearPad(GPIOA, 0);
@@ -318,8 +303,8 @@ static void dma_sai_a_interrupt_spilink_master(void* dat, uint32_t flags)
 }
 
 
-static void dma_sai_a_interrupt_spilink_slave(void* dat, uint32_t flags)
-{
+static void dma_sai_a_interrupt_spilink_slave(void* dat, uint32_t flags) {
+
     (void) dat;
     (void) flags;
 
@@ -328,7 +313,7 @@ static void dma_sai_a_interrupt_spilink_slave(void* dat, uint32_t flags)
     palSetPad(GPIOA, 0);
 #endif
 
-    codec_interrupt_timestamp = halGetCounterValue();
+    codec_interrupt_timestamp = hal_lld_get_counter_value();
     spilink_slave_process();
 
     if ((sai_a_dma)->stream->CR & STM32_DMA_CR_CT)
@@ -343,10 +328,11 @@ static void dma_sai_a_interrupt_spilink_slave(void* dat, uint32_t flags)
 
 
 #ifdef DEBUG_SAI_INT_ON_GPIO
-static void dma_sai_b_interrupt(void* dat, uint32_t flags)
-{
+static void dma_sai_b_interrupt(void* dat, uint32_t flags) {
+
     (void) dat;
     (void) flags;
+
     palSetPadMode(GPIOA, 3, PAL_MODE_OUTPUT_PUSHPULL);
     palSetPad(GPIOA, 3);
     asm("nop"); asm("nop"); asm("nop"); asm("nop");
@@ -355,8 +341,8 @@ static void dma_sai_b_interrupt(void* dat, uint32_t flags)
 #endif
 
 
-void codec_ADAU1961_hw_init(uint16_t samplerate, bool_t isMaster)
-{
+void codec_ADAU1961_hw_init(uint16_t samplerate, bool_t isMaster) {
+
     ADAU_I2C_Init();
     chThdSleepMilliseconds(5);
 
@@ -372,38 +358,38 @@ void codec_ADAU1961_hw_init(uint16_t samplerate, bool_t isMaster)
 
 
     /* Confirm samplerate (redundant) */
-    if (samplerate != 48000)
-    {
+    if (samplerate != 48000) {
         /* Incompatible sample rate. Do nothing. */
         setErrorFlag(ERROR_CODEC_I2C);
         while (1);
     }
 
-    if (isMaster)
+    if (isMaster) {
         ADAU1961_WriteRegister6(ADAU1961_REG_R1_PLLC, &pll48k_exact[0]);
-    else
-        /* Temporarily set lower PLL frequency of synced odec */
+    }
+    else {
+        /* Temporarily set lower PLL frequency for synced codec */
         ADAU1961_WriteRegister6(ADAU1961_REG_R1_PLLC, &pll48k_pulldown[0]);
+    }
+
     chThdSleepMilliseconds(3);
 
-    uint8_t i = 100;
-    while(--i)
-    {
+    int i = 1000;
+
+    while (--i) {
         /* wait for PLL */
         ADAU1961_ReadRegister6(ADAU1961_REG_R1_PLLC);
-        if (i2crxbuf[5] & 0x02)
-        {
+        if (i2crxbuf[5] & 0x02) {
             /* Wait until PLL signals locked state */
             break;
         }
-        chThdSleepMilliseconds(10);
+        chThdSleepMilliseconds(1);
+    }
 
-        if (i == 0)
-        {
-            /* PLL never got to lock... Something wrong with the codec? */
-            setErrorFlag(ERROR_CODEC_I2C);
-            while (1);
-        }
+    if (!i) {
+        /* PLL never got to lock... Something wrong with the codec? */
+        setErrorFlag(ERROR_CODEC_I2C);
+        while (1);
     }
 
     ADAU1961_WriteRegister(ADAU1961_REG_R0_CLKC,     0x0F); /* Enable core, PLL as clksrc, 1024*FS */
@@ -438,8 +424,7 @@ void codec_ADAU1961_hw_init(uint16_t samplerate, bool_t isMaster)
 
     ADAU1961_WriteRegister(ADAU1961_REG_R15_SERP0,    0x01); /* Codec is master in both modes */
 
-    if (!isMaster)
-    {
+    if (!isMaster) {
         /* Pick up timing from codec's LRCLK (=FS) */
 
         palSetPad(LED2_PORT, LED2_PIN); /* Light red LED as long as there is no sync */
@@ -499,7 +484,7 @@ void codec_ADAU1961_hw_init(uint16_t samplerate, bool_t isMaster)
     ADAU1961_WriteRegister(ADAU1961_REG_R36_DACC0,    0x03); /* DAC enable */
 
     ADAU1961_WriteRegister(ADAU1961_REG_R31_PLLVOL,   0xE7); /* Playback Line Output Left Volume */
-    ADAU1961_WriteRegister(ADAU1961_REG_R32_PLRVOL,   0xE7); /* Playback Right Output Left Volume */
+    ADAU1961_WriteRegister(ADAU1961_REG_R32_PLRVOL,   0xE7); /* Playback Line Output Right Volume */
 
     ADAU1961_WriteRegister(ADAU1961_REG_R26_PLRML,    0x05); /* unmute Mixer5, 6dB gain */
     ADAU1961_WriteRegister(ADAU1961_REG_R27_PLRMR,    0x11); /* unmute Mixer6, 6dB gain */
@@ -526,8 +511,7 @@ void codec_ADAU1961_hw_init(uint16_t samplerate, bool_t isMaster)
 }
 
 
-void codec_ADAU1961_SAI_init(uint16_t samplerate, bool_t isMaster)
-{
+void codec_ADAU1961_SAI_init(uint16_t samplerate, bool_t isMaster) {
 
 
     /*configure MCO */
@@ -547,13 +531,14 @@ void codec_ADAU1961_SAI_init(uint16_t samplerate, bool_t isMaster)
     palSetPadMode(SAI1_FS_PORT, SAI1_FS_PIN, PAL_MODE_INPUT);
     palSetPadMode(SAI1_SD_A_PORT, SAI1_SD_A_PIN, PAL_MODE_INPUT);
     palSetPadMode(SAI1_SD_B_PORT, SAI1_SD_B_PIN, PAL_MODE_INPUT);
-    palSetPadMode(SAI1_SCK_PORT, SAI1_SCK_PIN, PAL_MODE_INPUT);
+    palSetPadMode(SAI1_SCK_PORT,  SAI1_SCK_PIN,  PAL_MODE_INPUT);
 
     codec_ADAU1961_hw_init(samplerate, isMaster);
 
     /* configure SAI */
     RCC->APB2ENR |= RCC_APB2ENR_SAI1EN;
     chThdSleepMilliseconds(1);
+
     SAI1_Block_A->CR2 = 0;//SAI_xCR2_FTH_1;
     SAI1_Block_B->CR2 = 0;//SAI_xCR2_FTH_0;
 
@@ -602,12 +587,15 @@ void codec_ADAU1961_SAI_init(uint16_t samplerate, bool_t isMaster)
         | STM32_DMA_CR_PSIZE_WORD | STM32_DMA_CR_MSIZE_WORD;
 
     bool_t b;
-    if  (isMaster)
+    if  (isMaster) {
         b = dmaStreamAllocate(sai_a_dma, STM32_SAI_A_IRQ_PRIORITY,
                               (stm32_dmaisr_t)dma_sai_a_interrupt_spilink_master, (void *)0);
-    else
+    }
+    else {
         b = dmaStreamAllocate(sai_a_dma, STM32_SAI_A_IRQ_PRIORITY,
                               (stm32_dmaisr_t)dma_sai_a_interrupt_spilink_slave, (void *)0);
+    }
+
     dmaStreamSetPeripheral(sai_a_dma, &(sai_a->DR));
     dmaStreamSetMemory0(sai_a_dma, buf);
     dmaStreamSetMemory1(sai_a_dma, buf2);
@@ -621,8 +609,7 @@ void codec_ADAU1961_SAI_init(uint16_t samplerate, bool_t isMaster)
     b |= dmaStreamAllocate(sai_b_dma, STM32_SAI_B_IRQ_PRIORITY, (stm32_dmaisr_t)0, (void *)0);
 #endif
 
-    if (b)
-    {
+    if (b) {
         setErrorFlag(ERROR_CODEC_I2C);
         while (1);
     }
@@ -636,13 +623,12 @@ void codec_ADAU1961_SAI_init(uint16_t samplerate, bool_t isMaster)
     dmaStreamClearInterrupt(sai_b_dma);
     dmaStreamClearInterrupt(sai_a_dma);
 
-    if (isMaster)
-    {
+    if (isMaster) {
         chSysLock();
         SAI1_Block_A->CR2 |= SAI_xCR2_FFLUSH;
         SAI1_Block_B->CR2 |= SAI_xCR2_FFLUSH;
-        SAI1_Block_A->DR=0;
-        SAI1_Block_B->DR=0;
+        SAI1_Block_A->DR = 0;
+        SAI1_Block_B->DR = 0;
         dmaStreamEnable(sai_b_dma);
         dmaStreamEnable(sai_a_dma);
         SAI1_Block_B->CR1 |= SAI_xCR1_SAIEN;
@@ -650,13 +636,12 @@ void codec_ADAU1961_SAI_init(uint16_t samplerate, bool_t isMaster)
         /* 2.25 us offset between dmarx and dmatx */
         chSysUnlock();
     }
-    else
-    {
+    else {
         chSysLock();
         SAI1_Block_A->CR2 |= SAI_xCR2_FFLUSH;
         SAI1_Block_B->CR2 |= SAI_xCR2_FFLUSH;
-        SAI1_Block_A->DR=0;
-        SAI1_Block_B->DR=0;
+        SAI1_Block_A->DR = 0;
+        SAI1_Block_B->DR = 0;
         wait_SPI_fsync(rising);
         dmaStreamEnable(sai_b_dma);
         dmaStreamEnable(sai_a_dma);
