@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x 
 set -e # exit immediately if anything "goes wrong"
 
 platform='unknown'
