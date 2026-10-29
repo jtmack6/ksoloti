@@ -100,3 +100,5 @@ xcode/
 tags
 tags.lock
 tags.temp
+# MCP server venv
+tools/mcp/.venv

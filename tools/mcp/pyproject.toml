@@ -3,4 +3,4 @@ name = "ksoloti-mcp"
 version = "0.1.0"
 description = "MCP server for the Ksoloti object library and .axp patches"
 requires-python = ">=3.10"
-dependencies = ["mcp>=1.0"]
+dependencies = ["mcp>=1.0,<2"]
