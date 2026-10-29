@@ -37,6 +37,17 @@ def base_type(port_type: str) -> str:
     return port_type.split(".")[0]
 
 
+# Element names a patch may use for a param instance (AxoObjectInstance.java @ElementListUnion).
+PARAM_ELEMS = ["frac32.u.mapvsl", "frac32.s.mapvsl", "frac32.u.map", "frac32.s.map", "int32.small",
+               "int32.hradio", "int32.vradio", "int32", "int2x16", "bin8", "bin12", "bin16", "bin32",
+               "bool32.tgl", "bool32.mom"]
+
+
+def _param_elem(param_type: str) -> str:
+    """'frac32.s.map.pitch' -> 'frac32.s.map' (longest matching instance element)."""
+    return max((e for e in PARAM_ELEMS if param_type == e or param_type.startswith(e + ".")), key=len, default=param_type)
+
+
 # ---------------------------------------------------------------- library index
 
 def _ports(parent, tag):
@@ -353,7 +364,7 @@ def add_object(path: str, type: str, x: int, y: int, name: str = "", params: dic
     for pdef in d["params"]:
         val = (params or {}).get(pdef["name"])
         if val is not None:
-            ET.SubElement(pe, pdef["type"], name=pdef["name"], value=str(val))
+            ET.SubElement(pe, _param_elem(pdef["type"]), name=pdef["name"], value=str(val))
     bad = set(params or {}) - {q["name"] for q in d["params"]}
     ae = ET.SubElement(o, "attribs")
     for adef in d["attribs"]:
@@ -421,7 +432,7 @@ def set_param(path: str, obj: str, name: str, value: float) -> str:
     pe = o.find("params")
     el = next((e for e in pe if e.get("name") == name), None)
     if el is None:
-        el = ET.SubElement(pe, pdef["type"], name=name)
+        el = ET.SubElement(pe, _param_elem(pdef["type"]), name=name)
     el.set("value", str(value))
     _save(p, tree)
     return f"{obj}.{name} = {value}"
