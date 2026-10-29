@@ -236,10 +236,10 @@ class rootc {
 
 rootc root;
 
-// Entry point called by firmware
-void PatchProcess(int32_t* inbuf, int32_t* outbuf) {
-    root.dsp();
-}
+// Entry points: the firmware does not link against symbols by name.
+// The patch binary exports a patchMeta struct (firmware/patch.h) holding
+// function pointers (fptr_patch_init, fptr_patch_dsp_process, ...) that
+// patch.c calls every 16-sample block.
 ```
 
 ### 3. ARM Compiler Builds Patch
@@ -387,6 +387,172 @@ frac32 multiply(frac32 a, frac32 b) {
 - Cortex-M4F has fast integer math
 - Deterministic performance (no floating-point exceptions)
 - Sufficient precision for audio (16-bit DAC/ADC)
+
+## Patch Language Reference
+
+Ksoloti has no written grammar; the language is defined by the Simple XML annotations in
+`src/main/java/axoloti/object/AxoObject.java` and `src/main/java/axoloti/Patch.java`, and its
+semantics by `Patch.java` `GenerateCode3()`. This section writes that down, aimed at readers
+coming from Max or Pure Data.
+
+### Vocabulary: Max/PD → Ksoloti
+
+| Max / PD | Ksoloti | Difference that matters |
+|---|---|---|
+| object box, external | `.axo` object (`<obj.normal>` inside `<objdefs>`) | Defined by C++ snippets in XML, compiled into every patch that uses it |
+| abstraction | `.axs` subpatch, or `<patchobj>` embedded in the patch | Embedded definitions are copied into the `.axp`, so the file is self-contained |
+| patch cord | `<net>` inside `<nets>` | Becomes a plain C++ variable; zero runtime cost |
+| signal cord (`~`) | `frac32buffer` port, `code.srate` section | 16-sample block of Q27 fixed-point, not float |
+| control message | `frac32`, `int32`, `bool32` port, `code.krate` section | Runs once per block (3 kHz). No message queue, no hot/cold inlets, no order-of-evaluation rules |
+| bang | `bool32.rising` inlet / `bool32.pulse` outlet | A level that is sampled each block, not an event |
+| creation arguments, `loadbang` | `<attribs>` | Compile-time constants, text-substituted as `attr_<name>` before compilation |
+| number box, dial | `<params>` | Run-time values, live-editable over USB as `param_<name>` |
+| `scope~`, `meter~`, `print` | `<displays>` | Firmware → GUI only, cannot feed back into the patch |
+| `inlet` / `outlet` in an abstraction | `patch/inlet f|i|b|a|string`, `patch/outlet …` objects | Typed; `a` is audio (`frac32buffer`) |
+| `poly~` | subpatch mode `polyphonic`, `polychannel`, `polyexpression` | Voices are N instances of the subpatch class |
+
+### Execution model
+
+The whole patch compiles to one C++ class, `rootc`, with `Init()` and `dsp()` methods.
+Each object instance is a nested class with its own `Init()` and `dsp()`. Per 16-sample block
+the firmware calls `rootc::dsp()`, which calls every object's `dsp()` **in object-list order**
+(creation order by default; the "sort by execution" preference reorders top-to-bottom,
+left-to-right). Inside one object's `dsp()`:
+
+1. `code.krate` runs once.
+2. `code.srate` runs in a loop `for (buffer_index = 0; buffer_index < BUFSIZE; buffer_index++)`.
+
+Nets are member variables of `rootc`, passed by reference into each `dsp()` call. Because nets
+persist across blocks, **feedback is allowed and is implicitly a one-block delay**: if an inlet
+reads a net whose source runs later in the order, the generator reads a latched copy of the
+previous block's value (`Net.NeedsLatch()`, `Patch.GenerateDSPCodePlusPlusSubObj()`). There is
+no cycle error and no need for a `z-1` object, but the delay is 16 samples, not one.
+
+MIDI does not flow through cords. Objects that react to MIDI implement `code.midihandler`,
+which the generator assembles into one `MidiInHandler()` on `rootc`, called between blocks.
+
+### Port types
+
+The set of port kinds is closed; it is the `@ElementListUnion` in `AxoObject.java`.
+
+| Base type | C type | Meaning | Range hints (UI only, not checked) |
+|---|---|---|---|
+| `bool32` | `int32_t` | 0 / non-zero | inlets: `.rising`, `.risingfalling`; outlet: `.pulse` |
+| `int32` | `int32_t` | integer | `.pos`, `.bipolar` |
+| `frac32` | `int32_t` | Q27 fixed-point, ±16.0 | `.pos` (shown 0..64), `.bipolar` (shown −64..64) |
+| `frac32buffer` | `int32_t[16]` | one audio block of `frac32` | `.pos`, `.bipolar` |
+| `charptr32` | `char*` | string (table names, file names) | — |
+
+**Automatic conversions** (`datatypes/*.java`, `GenerateConversionToType()`): any of
+`frac32`, `int32`, `bool32` converts to any other (`int32 → frac32` is `<< 21`,
+`frac32 → bool32` is `> 0`). A `frac32buffer` connected to a scalar inlet passes **sample 0
+only**. There is **no scalar → buffer promotion**; an object that accepts both provides two
+overloads instead (see `conv/b2p` below). Connecting two incompatible types, or two sources to
+one inlet of different types, is an invalid net and the inlet gets its default value.
+
+### Anatomy of an object (`.axo`)
+
+`objects/ksoloti/conv/b2p.axo` from `ksoloti-objects`, abridged. It defines the same object
+twice; the patcher picks the overload whose inlet type matches what is connected:
+
+```xml
+<objdefs appVersion="1.0.12">
+  <obj.normal id="b2p" uuid="f6f63d71…" sha="93baeaf…">
+    <upgradeSha>b80b299…</upgradeSha>                <!-- previous version of this object -->
+    <sDescription>bipolar to unipolar</sDescription>
+    <author>Johannes Taelman, Ksoloti</author>
+    <license>BSD</license>
+    <helpPatch>b2p.axh</helpPatch>                    <!-- optional -->
+    <inlets>  <frac32 name="i" description="input"/>  </inlets>
+    <outlets> <frac32 name="o" description="output"/> </outlets>
+    <displays/> <params/> <attribs/>
+    <code.krate><![CDATA[outlet_o = (inlet_i >> 1) + (1 << 26);]]></code.krate>
+  </obj.normal>
+
+  <obj.normal id="b2p" uuid="5b5f940…" sha="8613e8a…">   <!-- audio-rate overload -->
+    …
+    <inlets>  <frac32buffer name="i"/> </inlets>
+    <outlets> <frac32buffer name="o"/> </outlets>
+    <code.srate><![CDATA[outlet_o = (inlet_i >> 1) + (1 << 26);]]></code.srate>
+  </obj.normal>
+</objdefs>
+```
+
+Code sections and where they land in the generated class (`AxoObjectInstance.java`):
+
+| Section | Generated location | Typical use |
+|---|---|---|
+| `code.declaration` | class body | member variables, helper classes |
+| `code.init` | `Init()` | reset state |
+| `code.dispose` | `Dispose()` | free SDRAM, close files |
+| `code.krate` | `dsp()`, once per block | control logic |
+| `code.srate` | `dsp()`, inside the 16-sample loop | per-sample DSP |
+| `code.midihandler` | `MidiInHandler()` | MIDI reactions |
+
+Inside the snippets the generator provides these names: `inlet_<name>`, `outlet_<name>`,
+`param_<name>`, `attr_<name>`, `disp_<name>`, plus `parent` (the enclosing `rootc`) and, in
+`code.srate`, `buffer_index`. Snippets are inserted verbatim, so they can use any firmware API
+exposed through `xpatch.h` (`axoloti_math.h`, `axoloti_filters.h`, SDRAM allocation, …).
+
+**Params vs attribs.** `<params>` are run-time: `frac32.u.map`, `frac32.s.map` and their
+scaled variants (`.pitch`, `.freq`, `.gain`, `.ratio`, `.kdecaytime`, …), `int32`,
+`int32.hradio` / `.vradio`, `bin1` … `bin32`, `bin1.momentary`. The `.map` suffix exposes a
+modulation / MIDI-CC slot. `<attribs>` are compile-time: `spinner`, `combo`, `int32`, `objref`,
+`table`, `file`, `wavefile`, `text`. Changing an attrib forces a recompile; changing a param
+does not.
+
+### Anatomy of a patch (`.axp`)
+
+`patches/demos/hacked_eq5.axp` from `ksoloti-objects`, abridged:
+
+```xml
+<patch-1.0 appVersion="1.0.12">
+  <obj type="audio/outconfig" uuid="eace67e…" name="outconfig_1" x="14" y="14">
+    <params/>
+    <attribs> <combo attributeName="mode" selection="Stereo"/> </attribs>
+  </obj>
+  <obj type="osc/brds/chaoticfeedbackfm" uuid="e5d9cdd6…" name="chaoticfeedbackfm_1" x="168" y="14">
+    <params> <frac32.s.map name="pitch" value="-60.53"/> … </params>
+    <attribs/>
+  </obj>
+  <patchobj type="patch/object" uuid="b190fbc0…" name="hacked_eq5hq_1" x="336" y="14">
+    <params> … </params>
+    <object id="patch/object" uuid="b190fbc0…">   <!-- full object definition embedded here -->
+      <inlets> <frac32buffer name="in"/> <frac32.bipolar name="low"/> … </inlets>
+      …
+    </object>
+  </patchobj>
+  <nets>
+    <net>
+      <source obj="chaoticfeedbackfm_1" outlet="out"/>
+      <dest   obj="hacked_eq5hq_1"      inlet="in"/>   <!-- one source, N dests -->
+    </net>
+  </nets>
+  <settings> <subpatchmode>no</subpatchmode> <MidiChannel>1</MidiChannel> <NPresets>8</NPresets> … </settings>
+  <notes/>
+</patch-1.0>
+```
+
+Instance kinds (`Patch.java` `@ElementListUnion`): `obj` (library object), `patcher`
+(inline subpatch editable in place), `patchobj` (embedded object definition), `comment`,
+`hyperlink`, and `zombie`, a placeholder kept so a patch still loads when an object cannot be
+resolved. The `name` attribute is the instance name used in `<nets>` and in the generated
+C++ (`<name>_i`).
+
+### Versioning and resolution
+
+An object carries `uuid` (identity), `sha` (hash of its definition) and `upgradeSha` (the
+`sha` it supersedes). A patch stores both `type` (path such as `osc/sine`) and `uuid` for each
+instance. The loader resolves by `uuid` first and falls back to `type`, so renaming or editing a
+library object does not silently break old patches; unresolvable instances become zombies.
+
+### Where to read the semantics
+
+- `src/main/java/axoloti/Patch.java` — `GenerateCode3()`, `GenerateDSPCodePlusPlusSub()`, `SortByExecution()`
+- `src/main/java/axoloti/object/AxoObjectInstance.java` — per-object class emission (`Init(` ~line 939, `dsp(` ~line 1030)
+- `src/main/java/axoloti/Net.java` — `NeedsLatch()`, net validity
+- `src/main/java/axoloti/datatypes/` — type conversions
+- `firmware/patch.h`, `firmware/patch.c` — `patchMeta` function pointers and the block loop
 
 ## Development Workflow Summary
 
