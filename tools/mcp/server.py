@@ -461,6 +461,32 @@ def validate_patch(path: str) -> str:
             for pp in o.findall("params/*"):
                 if pp.get("name") not in known:
                     errs.append(f"{o.get('name')}: unknown param '{pp.get('name')}'")
+    # Overload promotion, as the patcher does on load (Patch.PromoteOverloading): pick the overload whose
+    # inlets match the base types of what is connected to them. Iterate so promotions propagate downstream.
+    for _ in range(3):
+        changed = False
+        for o in _instances(root):
+            d = defs.get(o.get("name"))
+            if not d or d.get("embedded") or len(LIB.get(d["type"])) < 2:
+                continue
+            conn = {}
+            for n in root.findall("nets/net"):
+                s = n.find("source")
+                sdef = defs.get(s.get("obj")) if s is not None else None
+                sp = next((pt for pt in (sdef or {}).get("outlets", []) if pt["name"] == s.get("outlet")), None)
+                for dd in n.findall("dest"):
+                    if dd.get("obj") == o.get("name") and sp:
+                        conn[dd.get("inlet")] = base_type(sp["type"])
+            if not conn:
+                continue
+            def score(ov):
+                return sum(1 for pt in ov["inlets"] if conn.get(pt["name"]) == base_type(pt["type"]))
+            best = max(LIB.get(d["type"]), key=score)
+            if best is not d and score(best) > score(d):
+                defs[o.get("name")] = best
+                changed = True
+        if not changed:
+            break
     seen_inlets = set()
     for n in root.findall("nets/net"):
         srcs, dsts = n.findall("source"), n.findall("dest")
