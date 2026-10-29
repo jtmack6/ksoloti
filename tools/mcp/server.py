@@ -218,7 +218,7 @@ EQUIV = {
     "cycle~": ["osc/sine"], "osc~": ["osc/sine"], "phasor~": ["osc/phasor"], "saw~": ["osc/saw"],
     "rect~": ["osc/square"], "tri~": ["osc/tri"], "noise~": ["noise/white"], "pink~": ["noise/pink"],
     "*~": ["math/*", "mix/gain", "gain/vca"], "+~": ["math/+", "mix/mix 2"], "-~": ["math/-"],
-    "dac~": ["audio/out stereo"], "adc~": ["audio/in stereo"], "ezdac~": ["audio/out stereo"],
+    "dac~": ["audio/out stereo", "ksoloti/usbaudio/out stereo (USB firmware: codec out is not sent over USB)"], "adc~": ["audio/in stereo", "ksoloti/usbaudio/in stereo"], "ezdac~": ["audio/out stereo"],
     "lores~": ["filter/lp1", "filter/svf"], "svf~": ["filter/svf"], "biquad~": ["filter/biquad"],
     "reson~": ["filter/svf"], "onepole~": ["filter/lp1"], "hip~": ["filter/hp1"], "lop~": ["filter/lp1"],
     "delay~": ["delay/write", "delay/read"], "tapin~": ["delay/write"], "tapout~": ["delay/read"],
