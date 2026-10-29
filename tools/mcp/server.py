@@ -573,7 +573,8 @@ def compile_patch(path: str, timeout_s: int = 180) -> str:
 
 @mcp.tool()
 def open_in_patcher(path: str) -> str:
-    """Open a .axp/.axs in the running Ksoloti patcher via its single-instance socket. User then presses Go Live."""
+    """Open a .axp/.axs in the running Ksoloti patcher via its single-instance socket. User then presses Go Live.
+    The patcher will not reload a file that is already open; the user must close that window first."""
     p = Path(path).expanduser().resolve()
     if not p.exists():
         return f"{p} does not exist."
@@ -581,7 +582,8 @@ def open_in_patcher(path: str) -> str:
         return "No running patcher found on port 55576. Start Ksoloti first."
     with socket.create_connection(("127.0.0.1", SINGLE_INSTANCE_PORT), timeout=2) as s:
         s.sendall(f"{p}\n".encode())
-    return f"Sent {p} to the patcher."
+    return (f"Sent {p} to the patcher. If that file was already open there, the patcher only focuses the "
+            "existing window (PatchGUI.OpenPatchInvisible) and does NOT reload it: close that window first, then call again.")
 
 
 @mcp.tool()

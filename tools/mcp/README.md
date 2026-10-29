@@ -41,7 +41,8 @@ Authoring:
 - `compile_patch(path)` — authoritative: `java -jar Ksoloti.jar -runTest path`. Only works while the
   GUI is **not** running (the jar hands files to a running instance and exits).
 - `open_in_patcher(path)` — sends the file to the running GUI over its single-instance socket
-  (port 55576); press Go Live there. USB stays owned by the GUI.
+  (port 55576); press Go Live there. USB stays owned by the GUI. A file that is already open is only
+  focused, not reloaded: close its window before sending it again.
 
 ## Limits
 
