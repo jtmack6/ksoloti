@@ -245,6 +245,13 @@ Edit `src/main/java/axoloti/Patch.java` GenerateCode3() method. May require corr
 - **Code Style:** This is a legacy codebase (based on Axoloti by Johannes Taelman). Maintain consistency with existing patterns.
 - **Hardware Support:** Primary target is Ksoloti Core, with legacy support for Axoloti Core boards.
 
+## MCP server (`tools/mcp/`)
+
+`tools/mcp/server.py` exposes the object library and `.axp` authoring to MCP clients (see its README).
+Gotchas learned building it: params in a patch use the instance element names (`frac32.s.map`, not
+`frac32.s.map.pitch`); the patcher will not reload a file that is already open; with USB Audio firmware,
+audio reaches the host only through `ksoloti/usbaudio/out stereo`, not `audio/out stereo`.
+
 ## Resources
 
 - [Ksoloti Forum](https://ksoloti.discourse.group)
