@@ -42,6 +42,7 @@ platform_*/arm-none-eabi
 platform_*/lib
 platform_*/share
 platform_*/bin/arm-none-eabi-*
+platform_*/src
 
 #Version file
 src/main/java/axoloti/Version.java
