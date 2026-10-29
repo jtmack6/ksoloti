@@ -438,9 +438,9 @@ The set of port kinds is closed; it is the `@ElementListUnion` in `AxoObject.jav
 | Base type | C type | Meaning | Range hints (UI only, not checked) |
 |---|---|---|---|
 | `bool32` | `int32_t` | 0 / non-zero | inlets: `.rising`, `.risingfalling`; outlet: `.pulse` |
-| `int32` | `int32_t` | integer | `.pos`, `.bipolar` |
-| `frac32` | `int32_t` | Q27 fixed-point, ±16.0 | `.pos` (shown 0..64), `.bipolar` (shown −64..64) |
-| `frac32buffer` | `int32_t[16]` | one audio block of `frac32` | `.pos`, `.bipolar` |
+| `int32` | `int32_t` | integer | `.positive`, `.bipolar` |
+| `frac32` | `int32_t` | Q27 fixed-point, ±16.0 | `.positive` (shown 0..64), `.bipolar` (shown −64..64) |
+| `frac32buffer` | `int32_t[16]` | one audio block of `frac32` | `.positive`, `.bipolar` |
 | `charptr32` | `char*` | string (table names, file names) | — |
 
 **Automatic conversions** (`datatypes/*.java`, `GenerateConversionToType()`): any of
