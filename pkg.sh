@@ -187,23 +187,33 @@ tar -czf ../ksoloti_patcher-mac-${CUSTOMLABEL}${VERSION_LONG}.tar.gz *
 cd ../..
 rm -rf ./packagetemp/mac_x64
 
-# # ----- MacOS aarch64 (arm64)
-# java -jar ./jdks/packr-all-4.0.0.jar --verbose --output ./packagetemp/mac_aarch64/Ksoloti-${VERSION}.app -- ./jdks/packr-mac_aarch64.json
+# ----- MacOS aarch64 (arm64)
+java -jar ./jdks/packr-all-4.0.0.jar --verbose --output ./packagetemp/mac_aarch64/Ksoloti-${VERSION}.app -- ./jdks/packr-mac_aarch64.json
 
-# cp ./jdks/template_Info.plist ./packagetemp/mac_aarch64/Ksoloti-${VERSION}.app/Contents/Info.plist
-# cd ./packagetemp/mac_aarch64/Ksoloti-${VERSION}.app/Contents/Resources
-# remove_temp_files
+cp ./jdks/template_Info.plist ./packagetemp/mac_aarch64/Ksoloti-${VERSION}.app/Contents/Info.plist
 
-# chmod 755 ./jre/lib/jspawnhelper
-# chmod 755 ./firmware/*.mk
-# chmod -R 755 ./platform_mac_aarch64/bin/*
-# chmod -R 755 ./platform_mac_aarch64/*/bin/*
-# cd ../../..
+# packr's native launcher is x86_64-only and can't load an arm64 JRE, so replace it with a shell launcher.
+# Keep the JVM args in sync with jdks/packr-mac_aarch64.json.
+cat > ./packagetemp/mac_aarch64/Ksoloti-${VERSION}.app/Contents/MacOS/Ksoloti <<'EOF'
+#!/bin/sh
+cd "$(dirname "$0")/../Resources" || exit 1
+exec ./jre/bin/java -Xms256m -Xmx2g -Dsun.java2d.opengl=true -Dsun.java2d.dpiaware=true -Xdock:name=Ksoloti -Xdock:icon=icons.icns -cp Ksoloti.jar axoloti.Axoloti "$@"
+EOF
+chmod 755 ./packagetemp/mac_aarch64/Ksoloti-${VERSION}.app/Contents/MacOS/Ksoloti
 
-# tar -czf ../ksoloti_patcher-mac_aarch64-${CUSTOMLABEL}${VERSION_LONG}.tar.gz *
+cd ./packagetemp/mac_aarch64/Ksoloti-${VERSION}.app/Contents/Resources
+remove_temp_files
 
-# cd ../..
-# rm -rf ./packagetemp/mac_aarch64
+chmod 755 ./jre/lib/jspawnhelper
+chmod 755 ./firmware/*.mk
+chmod -R 755 ./platform_mac_aarch64/bin/*
+chmod -R 755 ./platform_mac_aarch64/*/bin/*
+cd ../../..
+
+tar -czf ../ksoloti_patcher-mac_aarch64-${CUSTOMLABEL}${VERSION_LONG}.tar.gz *
+
+cd ../..
+rm -rf ./packagetemp/mac_aarch64
 
 # ----- Windows x64
 java -jar ./jdks/packr-all-4.0.0.jar --verbose --output ./packagetemp/win_x64/ksoloti-${VERSION} -- ./jdks/packr-win_x64.json
